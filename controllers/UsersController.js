@@ -1,5 +1,6 @@
-import dbClient from '../utils/db';
 import crypto from 'crypto';
+import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
 class UsersController {
   // POST /users - Create a new user
@@ -14,9 +15,9 @@ class UsersController {
     }
 
     try {
-        if (!dbClient.isAlive()) {
-            return res.status(500).json({ error: 'Database is not connected' });
-          }
+      if (!dbClient.isAlive()) {
+        return res.status(500).json({ error: 'Database is not connected' });
+      }
       const existingUser = await dbClient.db.collection('users').findOne({ email });
       if (existingUser) {
         return res.status(400).json({ error: 'Already exists' });
@@ -34,7 +35,7 @@ class UsersController {
         email: newUser.email,
       });
     } catch (error) {
-        console.error(error)
+      console.error(error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
@@ -42,25 +43,24 @@ class UsersController {
   static async getMe(req, res) {
     const token = req.headers['x-token'];
     if (!token) {
-        return res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const key = `auth_${token}`;
     const userId = await redisClient.get(key);
 
     if (!userId) {
-        return res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const user = await dbClient.findUserById(userId);
 
     if (!user) {
-        return res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
     }
 
     return res.status(200).send({ id: user._id, email: user.email });
-}
-
+  }
 }
 
 export default UsersController;
